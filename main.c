@@ -13,36 +13,16 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 */
-
+/* dikerjakan dengan Chibi Os 2.6.9*/
 #include "ch.h"
 #include "hal.h"
-
-static void pwmpcb(PWMDriver *pwmp) {
-
-  (void)pwmp;
-  palClearPad(GPIOE, GPIOE_LED4_BLUE);
-}
-
-static void pwmc1cb(PWMDriver *pwmp) {
-
-  (void)pwmp;
-  palSetPad(GPIOE, GPIOE_LED4_BLUE);
-}
-
-static PWMConfig pwmcfg = {
-  10000,                                    /* 10kHz PWM clock frequency.   */
-  10000,                                    /* Initial PWM period 1S.       */
-  pwmpcb,
-  {
-   {PWM_OUTPUT_ACTIVE_HIGH, pwmc1cb},
-   {PWM_OUTPUT_DISABLED, NULL},
-   {PWM_OUTPUT_DISABLED, NULL},
-   {PWM_OUTPUT_DISABLED, NULL}
-  },
-  0,
-  0
-};
-
+#include "shell.h"
+#include "chprintf.h"
+#include "usbcfg.h"
+#include <string.h>
+#include "test.h"
+/*tidak menggunakan PWM*/
+/*menggunakan input Capture dan mengaktifkan ICUdriver*/
 icucnt_t last_width, last_period;
 
 static void icuwidthcb(ICUDriver *icup) {
@@ -73,11 +53,7 @@ static ICUConfig icucfg = {
 int main(void) {
 
   /*
-   * System initializations.
-   * - HAL initialization, this also initializes the configured device drivers
-   *   and performs the board-specific initializations.
-   * - Kernel initialization, the main() function becomes a thread and the
-   *   RTOS is active.
+   mengaktifkan chibios dan hal
    */
   halInit();
   chSysInit();
@@ -88,43 +64,12 @@ int main(void) {
    * GPIOC6 is the ICU input.
    * The two pins have to be externally connected together.
    */
-  pwmStart(&PWMD2, &pwmcfg);
-  palSetPadMode(GPIOA, 15, PAL_MODE_ALTERNATE(1));
+  //pwmStart(&PWMD2, &pwmcfg);
   icuStart(&ICUD3, &icucfg);
   palSetPadMode(GPIOC, 6, PAL_MODE_ALTERNATE(2));
   icuEnable(&ICUD3);
   chThdSleepMilliseconds(2000);
 
-  /*
-   * Starts the PWM channel 0 using 75% duty cycle.
-   */
-  pwmEnableChannel(&PWMD2, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD2, 7500));
-  chThdSleepMilliseconds(5000);
-
-  /*
-   * Changes the PWM channel 0 to 50% duty cycle.
-   */
-  pwmEnableChannel(&PWMD2, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD2, 5000));
-  chThdSleepMilliseconds(5000);
-
-  /*
-   * Changes the PWM channel 0 to 25% duty cycle.
-   */
-  pwmEnableChannel(&PWMD2, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD2, 2500));
-  chThdSleepMilliseconds(5000);
-
-  /*
-   * Changes PWM period to half second the duty cycle becomes 50%
-   * implicitly.
-   */
-  pwmChangePeriod(&PWMD2, 5000);
-  chThdSleepMilliseconds(5000);
-
-  /*
-   * Disables channel 0 and stops the drivers.
-   */
-  pwmDisableChannel(&PWMD2, 0);
-  pwmStop(&PWMD2);
   icuDisable(&ICUD3);
   icuStop(&ICUD3);
   palClearPad(GPIOE, GPIOE_LED4_BLUE);

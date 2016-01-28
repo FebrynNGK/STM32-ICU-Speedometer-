@@ -1,2 +1,5 @@
 ../../../os/hal/include
 ../../../os/kernel/include
+../../../test
+../../../os/various
+.
