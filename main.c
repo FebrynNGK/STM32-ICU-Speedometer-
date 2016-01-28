@@ -21,8 +21,41 @@
 #include "usbcfg.h"
 #include <string.h>
 #include "test.h"
-/*tidak menggunakan PWM*/
+int data_periode;
+int kecepatan;
+//diberi usb cdc
+// Serial over USB Driver structure.
+SerialUSBDriver SDU1;
+BaseSequentialStream* chp =(BaseSequentialStream*) &SDU1;
+#define usb_lld_connect_bus(usbp)
+#define usb_lld_disconnect_bus(usbp)
+//
+//mengkatifkan shell command dan menghitung kecepatan mobil
+void send_kecepatan(BaseSequentialStream *chp, int argc, char *argv[]){
+  (void)argc;
+  (void)argv;
+  chprintf((BaseSequentialStream *)&SDU1, "kecepatan=%d\r\n", kecepatan);
+
+}
+void send_periode(BaseSequentialStream *chp, int argc, char *argv[]){
+    (void)argc;
+    (void)argv;
+    chprintf((BaseSequentialStream *)&SDU1, "periode=%d\r\n",data_periode)
+}
+#define SHELL_WA_SIZE   THD_WA_SIZE(2048)
+static const ShellCommand commands[] = {
+  {"kecepatanl", send_kecepatan},//ketik ul+enter pada serial terminal(bray terminal)
+  {"periode", send_periode},
+  {NULL, NULL}
+};
+static const ShellConfig shell_cfg1 = {
+  (BaseSequentialStream *)&SDU1,
+  commands
+};
+
+/*tidak menggunakan PWM seperti contoh di testhal*/
 /*menggunakan input Capture dan mengaktifkan ICUdriver*/
+/*menghitung pulsa masuk pada pin P...*/
 icucnt_t last_width, last_period;
 
 static void icuwidthcb(ICUDriver *icup) {
@@ -35,6 +68,7 @@ static void icuperiodcb(ICUDriver *icup) {
 
   palClearPad(GPIOE, GPIOE_LED9_BLUE);
   last_period = icuGetPeriod(icup);
+  data_periode=last_period;
 }
 
 static ICUConfig icucfg = {
@@ -47,8 +81,26 @@ static ICUConfig icucfg = {
   0
 };
 
+/*belajar membuat thread, thread ini untuk menghitung data*/
+
+static WORKING_AREA(waThread_hitung, 1024);
+static msg_t Thread_calc(void *arg) {
+  chThdSleepMilliseconds(500);
+  (void)arg;
+  chRegSetThreadName("hitung");
+  int kecepatan=0;//kecepatan awal
+  int data_periode1;
+  while (TRUE)
+  {
+      data_periode1=data_periode*4;//angka 4 menunjukan berapa high dalam 1 lingkaran roda
+    kecepatan = (((2*3.14)/data_periode1)*0.3)
+
+    chThdSleepMilliseconds(100);//jarak antar perhitungan
+  }
+  return 0;
+}
 /*
- * Application entry point.
+ * progam utama
  */
 int main(void) {
 
@@ -57,14 +109,24 @@ int main(void) {
    */
   halInit();
   chSysInit();
+  /*inisiasi usb*/
+  sduObjectInit(&SDU1);
+  sduStart(&SDU1,&serusbcfg);
+/*mengaktifkan usb*/
+ usbDisconnectBus(serusbcfg.usbp);
+ chThdSleepMilliseconds(200);
+ usbStart(serusbcfg.usbp, &usbcfg);
+ usbConnectBus(serusbcfg.usbp);
+ /*mengaktifkan shell*/
+ shellInit();
 
   /*
    * Initializes the PWM driver 2 and ICU driver 3.
    * GPIOA15 is the PWM output.
    * GPIOC6 is the ICU input.
    * The two pins have to be externally connected together.
+   * diaktifkan juga di halconf dan mcuconf diganti true
    */
-  //pwmStart(&PWMD2, &pwmcfg);
   icuStart(&ICUD3, &icucfg);
   palSetPadMode(GPIOC, 6, PAL_MODE_ALTERNATE(2));
   icuEnable(&ICUD3);
@@ -74,12 +136,28 @@ int main(void) {
   icuStop(&ICUD3);
   palClearPad(GPIOE, GPIOE_LED4_BLUE);
   palClearPad(GPIOE, GPIOE_LED9_BLUE);
+//memanggil thread yang dibuat diatas
+
+   chThdCreateStatic(waThread_hitung, sizeof(waThread_hitung), NORMALPRIO+10, Thread_hitung, NULL);
 
   /*
    * Normal main() thread activity, in this demo it does nothing.
    */
   while (TRUE) {
-    chThdSleepMilliseconds(500);
+
+    //khusus USB Comand
+        if (!shelltp && (SDU1.config->usbp->state == USB_ACTIVE))
+            {
+                shelltp = shellCreate(&shell_cfg1, SHELL_WA_SIZE, NORMALPRIO);//mengaktifkan shell comand
+            }
+        else if (chThdTerminated(shelltp))
+            {
+                chThdRelease(shelltp);    /* Recovers memory of the previous shell.   */
+                shelltp = NULL;           /* Triggers spawning of a new shell.        */
+            }
+    chThdSleepMilliseconds(500);//delay mainthread
+       \
+      }
+      return 0;
   }
-  return 0;
-}
+
