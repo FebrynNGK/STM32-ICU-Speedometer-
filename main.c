@@ -16,11 +16,15 @@
 /* dikerjakan dengan Chibi Os 2.6.9*/
 #include "ch.h"
 #include "hal.h"
+#include "test.h"
 #include "shell.h"
 #include "chprintf.h"
 #include "usbcfg.h"
 #include <string.h>
-#include "test.h"
+
+extern const USBConfig usbcfg;
+extern const SerialUSBConfig serusbcfg;
+
 int data_periode;
 int kecepatan;
 //diberi usb cdc
@@ -34,13 +38,15 @@ BaseSequentialStream* chp =(BaseSequentialStream*) &SDU1;
 void send_kecepatan(BaseSequentialStream *chp, int argc, char *argv[]){
   (void)argc;
   (void)argv;
-  chprintf((BaseSequentialStream *)&SDU1, "kecepatan=%d\r\n", kecepatan);
+  (void)chp;
+  chprintf((BaseSequentialStream *)&SDU1, "kecepatan=%d\r\n", data_periode);
 
 }
 void send_periode(BaseSequentialStream *chp, int argc, char *argv[]){
     (void)argc;
     (void)argv;
-    chprintf((BaseSequentialStream *)&SDU1, "periode=%d\r\n",data_periode)
+    (void)chp;
+    chprintf((BaseSequentialStream *)&SDU1, "periode=%d\r\n",data_periode);
 }
 #define SHELL_WA_SIZE   THD_WA_SIZE(2048)
 static const ShellCommand commands[] = {
@@ -84,25 +90,25 @@ static ICUConfig icucfg = {
 /*belajar membuat thread, thread ini untuk menghitung data*/
 
 static WORKING_AREA(waThread_hitung, 1024);
-static msg_t Thread_calc(void *arg) {
-  chThdSleepMilliseconds(500);
+static msg_t Thread_hitung(void *arg) {
   (void)arg;
   chRegSetThreadName("hitung");
-  int kecepatan=0;//kecepatan awal
+  kecepatan=0;//kecepatan awal
   int data_periode1;
   while (TRUE)
   {
       data_periode1=data_periode*4;//angka 4 menunjukan berapa high dalam 1 lingkaran roda
-    kecepatan = (((2*3.14)/data_periode1)*0.3)
+    kecepatan = (((2*3.14)/data_periode1)*0.3);
 
     chThdSleepMilliseconds(100);//jarak antar perhitungan
-  }
+  };
   return 0;
 }
 /*
  * progam utama
  */
 int main(void) {
+    Thread *shelltp = NULL;//deklarasi thread shell comand
 
   /*
    mengaktifkan chibios dan hal

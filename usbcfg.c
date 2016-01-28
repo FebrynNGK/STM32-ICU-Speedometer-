@@ -312,7 +312,7 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
 /*
  * USB driver configuration.
  */
-static const USBConfig usbcfg = {
+const USBConfig usbcfg = {
   usb_event,
   get_descriptor,
   sduRequestsHook,
@@ -322,7 +322,7 @@ static const USBConfig usbcfg = {
 /*
  * Serial over USB driver configuration.
  */
-static const SerialUSBConfig serusbcfg = {
+const SerialUSBConfig serusbcfg = {
   &USBD1,
   USBD1_DATA_REQUEST_EP,
   USBD1_DATA_AVAILABLE_EP,
