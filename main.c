@@ -16,7 +16,6 @@
 /* dikerjakan dengan Chibi Os 2.6.9*/
 #include "ch.h"
 #include "hal.h"
-#include "test.h"
 #include "shell.h"
 #include "chprintf.h"
 #include "usbcfg.h"
