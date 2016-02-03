@@ -2,6 +2,5 @@ chconf.h
 halconf.h
 main.c
 mcuconf.h
-test.h
 usbcfg.h
 usbcfg.c
